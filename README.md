@@ -45,20 +45,23 @@ Program:
 
 #define SIZE 30
 
+// Function to convert the string to lowercase
 void toLowerCase(char plain[], int ps)
 {
-    for (int i = 0; i < ps; i++)
+    int i;
+    for (i = 0; i < ps; i++)
     {
         if (plain[i] >= 'A' && plain[i] <= 'Z')
             plain[i] += 32;
     }
 }
 
+// Function to remove all spaces in a string
 int removeSpaces(char *plain, int ps)
 {
-    int count = 0;
+    int i, count = 0;
 
-    for (int i = 0; i < ps; i++)
+    for (i = 0; i < ps; i++)
     {
         if (plain[i] != ' ')
             plain[count++] = plain[i];
@@ -68,26 +71,31 @@ int removeSpaces(char *plain, int ps)
     return count;
 }
 
+// Function to generate the 5x5 key square
 void generateKeyTable(char key[], int ks, char keyT[5][5])
 {
-    int dicty[26] = {0};
-    int i = 0, j = 0;
+    int i, j, k;
+    int *dicty = (int *)calloc(26, sizeof(int));
+
+    if (dicty == NULL)
+        exit(1);
+
+    for (i = 0; i < ks; i++)
+    {
+        if (key[i] != 'j')
+            dicty[key[i] - 'a'] = 2;
+    }
 
     dicty['j' - 'a'] = 1;
 
-    for (int k = 0; k < ks; k++)
-    {
-        if (key[k] != 'j')
-            dicty[key[k] - 'a'] = 2;
-    }
+    i = 0;
+    j = 0;
 
-    for (int k = 0; k < ks; k++)
+    for (k = 0; k < ks; k++)
     {
-        int index = key[k] - 'a';
-
-        if (dicty[index] == 2)
+        if (key[k] != 'j' && dicty[key[k] - 'a'] == 2)
         {
-            dicty[index] = 1;
+            dicty[key[k] - 'a'] = 1;
             keyT[i][j++] = key[k];
 
             if (j == 5)
@@ -98,7 +106,7 @@ void generateKeyTable(char key[], int ks, char keyT[5][5])
         }
     }
 
-    for (int k = 0; k < 26; k++)
+    for (k = 0; k < 26; k++)
     {
         if (dicty[k] == 0)
         {
@@ -111,16 +119,21 @@ void generateKeyTable(char key[], int ks, char keyT[5][5])
             }
         }
     }
+
+    free(dicty);
 }
 
+// Function to search for two characters in the key square
 void search(char keyT[5][5], char a, char b, int arr[])
 {
+    int i, j;
+
     if (a == 'j') a = 'i';
     if (b == 'j') b = 'i';
 
-    for (int i = 0; i < 5; i++)
+    for (i = 0; i < 5; i++)
     {
-        for (int j = 0; j < 5; j++)
+        for (j = 0; j < 5; j++)
         {
             if (keyT[i][j] == a)
             {
@@ -137,92 +150,92 @@ void search(char keyT[5][5], char a, char b, int arr[])
     }
 }
 
+// Function to find modulus with 5
 int mod5(int a)
 {
     return a % 5;
 }
 
-int prepare(char str[], int len)
+// Function to make plaintext length even
+int prepare(char str[], int ptrs)
 {
-    int i = 0, j = 0;
-
-    while (i < len)
+    if (ptrs % 2 != 0)
     {
-        str[j++] = str[i++];
-
-        if (i < len && str[i] == str[j - 1])
-        {
-            str[j++] = 'x';
-        }
+        str[ptrs++] = 'z';
+        str[ptrs] = '\0';
     }
 
-    if (j % 2 != 0)
-        str[j++] = 'x';
-
-    str[j] = '\0';
-    return j;
+    return ptrs;
 }
 
+// Function to perform encryption
 void encrypt(char str[], char keyT[5][5], int ps)
 {
-    int a[4];
+    int i, a[4];
 
-    for (int i = 0; i < ps; i += 2)
+    for (i = 0; i < ps; i += 2)
     {
         search(keyT, str[i], str[i + 1], a);
 
+        // Same row
         if (a[0] == a[2])
         {
             str[i] = keyT[a[0]][mod5(a[1] + 1)];
             str[i + 1] = keyT[a[2]][mod5(a[3] + 1)];
         }
+
+        // Same column
         else if (a[1] == a[3])
         {
             str[i] = keyT[mod5(a[0] + 1)][a[1]];
             str[i + 1] = keyT[mod5(a[2] + 1)][a[3]];
         }
+
+        // Rectangle rule
         else
         {
             str[i] = keyT[a[0]][a[3]];
             str[i + 1] = keyT[a[2]][a[1]];
         }
     }
-
-    str[ps] = '\0';
 }
 
+// Function to encrypt using Playfair Cipher
 void encryptByPlayfairCipher(char str[], char key[])
 {
-    int ks = strlen(key);
+    int ps, ks;
+    char keyT[5][5];
+
+    ks = strlen(key);
     ks = removeSpaces(key, ks);
     toLowerCase(key, ks);
 
-    int ps = strlen(str);
+    ps = strlen(str);
     toLowerCase(str, ps);
     ps = removeSpaces(str, ps);
     ps = prepare(str, ps);
 
-    char keyT[5][5];
     generateKeyTable(key, ks, keyT);
     encrypt(str, keyT, ps);
 }
 
+// Driver code
 int main()
 {
     char str[SIZE], key[SIZE];
 
-    strcpy(key, "INFOSEC");
+    strcpy(key, "PRIYESH");
     printf("Key text: %s\n", key);
 
-    strcpy(str, "CRYPTO IS TOO EASY");
+    strcpy(str, "priyesh");
     printf("Plain text: %s\n", str);
 
     encryptByPlayfairCipher(str, key);
-
     printf("Cipher text: %s\n", str);
 
     return 0;
 }
+
 
 
 ```
@@ -231,7 +244,9 @@ int main()
 
 
 Output:
-<img width="1917" height="1091" alt="image" src="https://github.com/user-attachments/assets/19a0bf9f-eebc-428b-b0de-88eadcb86447" />
+
+
+<img width="260" height="122" alt="Screenshot 2026-10-29 085151" src="https://github.com/user-attachments/assets/58d5c760-4aad-4308-9e0b-2711f568c70a" />
 
 
 Result:
