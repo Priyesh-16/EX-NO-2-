@@ -38,215 +38,115 @@ STEP-5: Display the obtained cipher text.
 
 Program:
 ```
-
 #include <stdio.h>
-#include <stdlib.h>
 #include <string.h>
+#include <ctype.h>
 
-#define SIZE 30
+char matrix[5][5];
 
-// Function to convert the string to lowercase
-void toLowerCase(char plain[], int ps)
-{
-    int i;
-    for (i = 0; i < ps; i++)
-    {
-        if (plain[i] >= 'A' && plain[i] <= 'Z')
-            plain[i] += 32;
-    }
-}
+void createMatrix(char key[]) {
+    int used[26] = {0};
+    int i, k = 0;
+    char ch;
 
-// Function to remove all spaces in a string
-int removeSpaces(char *plain, int ps)
-{
-    int i, count = 0;
+    for (i = 0; key[i] != '\0'; i++) {
+        ch = toupper(key[i]);
+        if (ch == 'J') ch = 'I';
 
-    for (i = 0; i < ps; i++)
-    {
-        if (plain[i] != ' ')
-            plain[count++] = plain[i];
-    }
-
-    plain[count] = '\0';
-    return count;
-}
-
-// Function to generate the 5x5 key square
-void generateKeyTable(char key[], int ks, char keyT[5][5])
-{
-    int i, j, k;
-    int *dicty = (int *)calloc(26, sizeof(int));
-
-    if (dicty == NULL)
-        exit(1);
-
-    for (i = 0; i < ks; i++)
-    {
-        if (key[i] != 'j')
-            dicty[key[i] - 'a'] = 2;
-    }
-
-    dicty['j' - 'a'] = 1;
-
-    i = 0;
-    j = 0;
-
-    for (k = 0; k < ks; k++)
-    {
-        if (key[k] != 'j' && dicty[key[k] - 'a'] == 2)
-        {
-            dicty[key[k] - 'a'] = 1;
-            keyT[i][j++] = key[k];
-
-            if (j == 5)
-            {
-                i++;
-                j = 0;
-            }
+        if (ch >= 'A' && ch <= 'Z' && !used[ch - 'A']) {
+            matrix[k / 5][k % 5] = ch;
+            used[ch - 'A'] = 1;
+            k++;
         }
     }
 
-    for (k = 0; k < 26; k++)
-    {
-        if (dicty[k] == 0)
-        {
-            keyT[i][j++] = (char)(k + 'a');
-
-            if (j == 5)
-            {
-                i++;
-                j = 0;
-            }
+    for (ch = 'A'; ch <= 'Z'; ch++) {
+        if (ch == 'J') continue;
+        if (!used[ch - 'A']) {
+            matrix[k / 5][k % 5] = ch;
+            k++;
         }
     }
-
-    free(dicty);
 }
 
-// Function to search for two characters in the key square
-void search(char keyT[5][5], char a, char b, int arr[])
-{
+void printMatrix() {
     int i, j;
+    printf("\nKey Matrix:\n");
+    for (i = 0; i < 5; i++) {
+        for (j = 0; j < 5; j++) {
+            printf("%c ", matrix[i][j]);
+        }
+        printf("\n");
+    }
+}
 
-    if (a == 'j') a = 'i';
-    if (b == 'j') b = 'i';
+void findPos(char ch, int *r, int *c) {
+    int i, j;
+    if (ch == 'J') ch = 'I';
 
     for (i = 0; i < 5; i++)
-    {
         for (j = 0; j < 5; j++)
-        {
-            if (keyT[i][j] == a)
-            {
-                arr[0] = i;
-                arr[1] = j;
+            if (matrix[i][j] == ch) {
+                *r = i;
+                *c = j;
+                return;
             }
-
-            if (keyT[i][j] == b)
-            {
-                arr[2] = i;
-                arr[3] = j;
-            }
-        }
-    }
 }
 
-// Function to find modulus with 5
-int mod5(int a)
-{
-    return a % 5;
-}
+void encrypt(char text[]) {
+    int i, r1, c1, r2, c2;
 
-// Function to make plaintext length even
-int prepare(char str[], int ptrs)
-{
-    if (ptrs % 2 != 0)
-    {
-        str[ptrs++] = 'z';
-        str[ptrs] = '\0';
-    }
+    printf("\nCiphertext/Encrypted text: ");
+    for (i = 0; text[i] && text[i + 1]; i += 2) {
+        findPos(text[i], &r1, &c1);
+        findPos(text[i + 1], &r2, &c2);
 
-    return ptrs;
-}
-
-// Function to perform encryption
-void encrypt(char str[], char keyT[5][5], int ps)
-{
-    int i, a[4];
-
-    for (i = 0; i < ps; i += 2)
-    {
-        search(keyT, str[i], str[i + 1], a);
-
-        // Same row
-        if (a[0] == a[2])
-        {
-            str[i] = keyT[a[0]][mod5(a[1] + 1)];
-            str[i + 1] = keyT[a[2]][mod5(a[3] + 1)];
-        }
-
-        // Same column
-        else if (a[1] == a[3])
-        {
-            str[i] = keyT[mod5(a[0] + 1)][a[1]];
-            str[i + 1] = keyT[mod5(a[2] + 1)][a[3]];
-        }
-
-        // Rectangle rule
+        if (r1 == r2)
+            printf("%c%c ",
+                   matrix[r1][(c1 + 1) % 5],
+                   matrix[r2][(c2 + 1) % 5]);
+        else if (c1 == c2)
+            printf("%c%c ",
+                   matrix[(r1 + 1) % 5][c1],
+                   matrix[(r2 + 1) % 5][c2]);
         else
-        {
-            str[i] = keyT[a[0]][a[3]];
-            str[i + 1] = keyT[a[2]][a[1]];
-        }
+            printf("%c%c ",
+                   matrix[r1][c2],
+                   matrix[r2][c1]);
     }
 }
 
-// Function to encrypt using Playfair Cipher
-void encryptByPlayfairCipher(char str[], char key[])
-{
-    int ps, ks;
-    char keyT[5][5];
+int main() {
+    char text[100], key[50];
+    int i, j = 0;
 
-    ks = strlen(key);
-    ks = removeSpaces(key, ks);
-    toLowerCase(key, ks);
+    printf("Enter plaintext: ");
+    fgets(text, sizeof(text), stdin);
 
-    ps = strlen(str);
-    toLowerCase(str, ps);
-    ps = removeSpaces(str, ps);
-    ps = prepare(str, ps);
+    printf("Enter key: ");
+    fgets(key, sizeof(key), stdin);
 
-    generateKeyTable(key, ks, keyT);
-    encrypt(str, keyT, ps);
+    text[strcspn(text, "\n")] = '\0';
+    key[strcspn(key, "\n")] = '\0';
+
+    for (i = 0; text[i] != '\0'; i++)
+        if (isalpha(text[i]))
+            text[j++] = toupper(text[i]);
+    text[j] = '\0';
+
+    if (strlen(text) % 2 != 0)
+        strcat(text, "X");
+
+    createMatrix(key);
+    printMatrix();
+    encrypt(text);
+
 }
-
-// Driver code
-int main()
-{
-    char str[SIZE], key[SIZE];
-
-    strcpy(key, "PRIYESH");
-    printf("Key text: %s\n", key);
-
-    strcpy(str, "priyesh");
-    printf("Plain text: %s\n", str);
-
-    encryptByPlayfairCipher(str, key);
-    printf("Cipher text: %s\n", str);
-
-    return 0;
-}
-
-
-
 ```
-
-
-
 
 Output:
 
-
-<img width="260" height="122" alt="Screenshot 2026-10-29 085151" src="https://github.com/user-attachments/assets/58d5c760-4aad-4308-9e0b-2711f568c70a" />
+<img width="1917" height="1198" alt="Screenshot 2026-10-30 183117" src="https://github.com/user-attachments/assets/4a5d0350-2ba3-4a22-be08-2a6e93317dcb" />
 
 
 Result:
